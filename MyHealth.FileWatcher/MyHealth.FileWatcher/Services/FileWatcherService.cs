@@ -1,9 +1,11 @@
-﻿using Azure.Storage.Blobs;
+﻿using Azure.Messaging.ServiceBus;
+using Azure.Storage.Blobs;
 using Microsoft.Extensions.Configuration;
 using MyHealth.Common;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace MyHealth.FileWatcher.Services
@@ -13,23 +15,29 @@ namespace MyHealth.FileWatcher.Services
         private readonly Timer _pollTimer;
         private readonly IConfiguration _configuration;
         private readonly IAzureBlobHelpers _azureBlobHelpers;
+        private readonly IServiceBusHelpers _serviceBusHelpers;
         private readonly BlobContainerClient _blobContainerClient;
+        private readonly ServiceBusClient _serviceBusClient;
 
         private readonly int _secondsBetweenPolls;
 
         public FileWatcherService(
             IConfiguration configuration,
             IAzureBlobHelpers azureBlobHelpers,
-            BlobContainerClient blobContainerClient)
+            IServiceBusHelpers serviceBusHelpers,
+            BlobContainerClient blobContainerClient,
+            ServiceBusClient serviceBusClient)
         {
             _pollTimer = new Timer();
             _configuration = configuration;
             _azureBlobHelpers = azureBlobHelpers;
+            _serviceBusHelpers = serviceBusHelpers;
             _blobContainerClient = blobContainerClient;
+            _serviceBusClient = serviceBusClient;
             _secondsBetweenPolls = int.Parse(_configuration["SecondsBetweenPolls"]);
         }
 
-        public void StartListening()
+        public async Task StartListening()
         {
             try
             {
@@ -37,8 +45,8 @@ namespace MyHealth.FileWatcher.Services
             }
             catch (Exception ex)
             {
-                // TODO Write to Serilog or write to exception queue in service bus
                 Console.WriteLine($"StartListening Exception: {ex.Message}");
+                await _serviceBusHelpers.SendMessageToTopic(_serviceBusClient, _configuration["ExceptionTopicName"], ex);
             }
         }
 
@@ -94,6 +102,7 @@ namespace MyHealth.FileWatcher.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception thrown during PollDirectoryForFile execution: {ex.Message}");
+                await _serviceBusHelpers.SendMessageToTopic(_serviceBusClient, _configuration["ExceptionTopicName"], ex);
             }
         }
     }

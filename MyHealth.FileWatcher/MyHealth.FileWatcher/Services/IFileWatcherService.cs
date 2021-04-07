@@ -1,8 +1,10 @@
-﻿namespace MyHealth.FileWatcher.Services
+﻿using System.Threading.Tasks;
+
+namespace MyHealth.FileWatcher.Services
 {
     public interface IFileWatcherService
     {
-        void StartListening();
+        Task StartListening();
         void StopListening();
     }
 }
