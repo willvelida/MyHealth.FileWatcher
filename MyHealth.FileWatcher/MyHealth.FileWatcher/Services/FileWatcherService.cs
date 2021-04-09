@@ -1,6 +1,4 @@
-﻿using Azure.Messaging.ServiceBus;
-using Azure.Storage.Blobs;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using MyHealth.Common;
 using System;
 using System.IO;
@@ -16,24 +14,18 @@ namespace MyHealth.FileWatcher.Services
         private readonly IConfiguration _configuration;
         private readonly IAzureBlobHelpers _azureBlobHelpers;
         private readonly IServiceBusHelpers _serviceBusHelpers;
-        private readonly BlobContainerClient _blobContainerClient;
-        private readonly ServiceBusClient _serviceBusClient;
 
         private readonly int _secondsBetweenPolls;
 
         public FileWatcherService(
             IConfiguration configuration,
             IAzureBlobHelpers azureBlobHelpers,
-            IServiceBusHelpers serviceBusHelpers,
-            BlobContainerClient blobContainerClient,
-            ServiceBusClient serviceBusClient)
+            IServiceBusHelpers serviceBusHelpers)
         {
             _pollTimer = new Timer();
             _configuration = configuration;
             _azureBlobHelpers = azureBlobHelpers;
             _serviceBusHelpers = serviceBusHelpers;
-            _blobContainerClient = blobContainerClient;
-            _serviceBusClient = serviceBusClient;
             _secondsBetweenPolls = int.Parse(_configuration["SecondsBetweenPolls"]);
         }
 
@@ -46,7 +38,7 @@ namespace MyHealth.FileWatcher.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"StartListening Exception: {ex.Message}");
-                await _serviceBusHelpers.SendMessageToTopic(_serviceBusClient, _configuration["ExceptionTopicName"], ex);
+                await _serviceBusHelpers.SendMessageToTopic(_configuration["ExceptionTopicName"], ex);
             }
         }
 
@@ -95,14 +87,14 @@ namespace MyHealth.FileWatcher.Services
                         throw new Exception("File has invalid format");
                     }
 
-                    await _azureBlobHelpers.UploadBlobAsync(_blobContainerClient, fullFileName, file);
+                    await _azureBlobHelpers.UploadBlobAsync(fullFileName, file);
                     File.Delete(file);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception thrown during PollDirectoryForFile execution: {ex.Message}");
-                await _serviceBusHelpers.SendMessageToTopic(_serviceBusClient, _configuration["ExceptionTopicName"], ex);
+                await _serviceBusHelpers.SendMessageToTopic(_configuration["ExceptionTopicName"], ex);
             }
         }
     }

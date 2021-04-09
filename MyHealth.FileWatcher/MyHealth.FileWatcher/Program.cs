@@ -1,6 +1,4 @@
-﻿using Azure.Messaging.ServiceBus;
-using Azure.Storage.Blobs;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MyHealth.Common;
@@ -37,12 +35,10 @@ namespace MyHealth.FileWatcher
                     {
                         services.AddHostedService<HostedService>();
                         services.AddTransient<IFileWatcherService, FileWatcherService>();
-                        services.AddTransient<IAzureBlobHelpers, AzureBlobHelpers>();
-                        services.AddTransient<IServiceBusHelpers, ServiceBusHelpers>();
                         services.AddSingleton(sp =>
-                            new BlobContainerClient(hostBuilderContext.Configuration["StorageConnectionString"], hostBuilderContext.Configuration["ContainerName"]));
+                            new AzureBlobHelpers(hostBuilderContext.Configuration["StorageConnectionString"], hostBuilderContext.Configuration["ContainerName"]));
                         services.AddSingleton(sp =>
-                            new ServiceBusClient(hostBuilderContext.Configuration["ServiceBusConnectionString"]));
+                            new ServiceBusHelpers(hostBuilderContext.Configuration["ServiceBusConnectionString"]));
                     }
                 );
 
